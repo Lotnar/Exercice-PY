@@ -1,0 +1,150 @@
+#ESTIMATIVA DOS ELEMENTOS DE MATRIZ NUCLEARES DOS EMISSORES BETA DOS ISÓTOPOS DO Fe USANDO AS VIDAS MEDIAS EXPERIMENTAIS
+#Fortran
+
+
+Program Element_Matrix_(EM)
+        IMPLICIT DOUBLE PRECISION (A-H,O-Z) 
+        DIMENSION Q(0:150,0:250), MV(0:150,0:250), EXEX(0:150,0:250)
+        DIMENSION xmv(0:150,0:250)
+        COMMON/B3/PI
+        COMMON/B2/C2ME
+        COMMON/FRESC/ZERO
+        COMMON/NUC/NZ,NN,AM
+        COMMON/B1/QIJ
+        EXTERNAL FBEDE
+        PI=4.D0*DATAN(1.D0)
+        XK=1.231D-94
+        C2ME=0.511D0 ! MeV
+        ZERO=1.D-10
+        CALL QVMV(Q,XMV,II,JJ)
+        
+        nz=26
+        read(5,*) nn,ttg
+        na=nn+nz
+        am=dfloat(na)
+        call qqq(fbede,1.d0,(q(nz,na)/0.511d0)+1.d0,ss)
+        write(*,*) 'integral fermi=',ss
+        EM2=XK/(XMV(nz,na)*SS)
+        write(*,*) 'm2_nosso=',em2, 'm2_tg=',xk/(ttg*ss)        
+        STOP
+        END
+C       ----------------------------------------------------------------
+                   SUBROUTINE QVMV (Q,XMV,KZ,KA)     
+C       ----------------------------------------------------------------
+        IMPLICIT DOUBLE PRECISION (A-H,O-Z)
+        DIMENSION Q(0:150,0:250), XMV(0:150,0:250), EXEX(0:150,0:250)
+        DIMENSION hf(0:150,0:250)
+        Open(50,File='big.dat')
+        Do while (.true.)
+        Read(50,*,end=8) NZ,NA,Excess_Nix,Excess_Aud
+        kz=NZ
+        ka=NA
+        kn=ka-kz
+        EXEX(kz,ka)=Excess_Aud
+        Enddo
+8       continue   
+        DO LZ=0,150
+        DO LA=0,250
+        Q(LZ,LA)=EXEX(LZ,LA)- EXEX(LZ+1,LA)
+        END DO
+        END DO
+        Open(29,File='exper.dat')
+        Do while (.true.) 
+        Read(29,*,end=10) NZZ,NAA,XX
+        iz=NZZ
+        ia=NAA
+        inn=nz-na
+        xmv(iz,ia)=xx
+        Enddo
+10      continue    
+        RETURN
+        END
+C     ------------------------------------------------------------------
+                         FUNCTION FERMI(O,XZ)
+C     ------------------------------------------------------------------
+      DOUBLE PRECISION AM,AMA,XN,O,NU,ALFA,GAC,C2ME,CPE,R,CHCOR,PI,FERMI
+     #                 ,XZ,ZERO
+        COMPLEX*16 ARRI,ABAJ,GAMA
+        COMMON/B3/PI
+        COMMON/NUC/NZ,NN,AM
+        COMMON/B2/C2ME
+        COMMON/FRESC/ZERO
+        EXTERNAL GAMA
+        IF((O-1.D0).LT.ZERO) GO TO 7090
+        XN=DFLOAT(NN)
+        AMA=XZ+XN
+        ALFA=1.D0/137.D0
+        CHCOR=197.D0
+        R=1.25D0*AMA**(1.D0/3.D0)
+        CPE=DSQRT(O**2.D0-1.D0)
+        NU= XZ*ALFA*O/CPE
+        GAC=DSQRT(1.D0-(XZ*ALFA)**2.D0)
+        ARRI=GAC*(1.D0,0.D0)+(0.D0,1.D0)*NU
+        ABAJ=(2.D0*GAC+1.D0)*(1.D0,0.D0)
+        FERMI=2.D0*(1.D0+GAC)*
+     #      ((2.D0*CPE*R*C2ME/CHCOR)**(-2.D0*(1.D0-GAC)))*
+     #      DEXP(PI*NU)*
+     #      ((CDABS(GAMA(ARRI)))**2.D0)/((CDABS(GAMA(ABAJ)))**2.D0)
+      GO TO 8000 
+      7090  FERMI=0.D0
+      8000  CONTINUE
+      RETURN
+      END
+C     ------------------------------------------------------------------
+                             FUNCTION GAMA (W)
+C     ------------------------------------------------------------------
+      DOUBLE PRECISION C,PI 
+      COMPLEX*16 W,GAMA,B,SUM
+      DIMENSION C(6)
+      COMMON/B3/PI
+      DATA C/ 76.180091729406,-86.505320327112,24.014098222230,
+     #        -1.231739516140,0.001208580030,-0.000005363820/
+      B=(1.000000000178,0.D0)
+      DO 1 I=1,6
+      SUM=C(I)/(W+I-1)
+      B=B+SUM
+1     CONTINUE
+      GAMA=((W+4.5D0)**(W-0.5D0))*CDEXP(-(W+4.5D0))*DSQRT(2.D0*PI)*B
+      RETURN
+      END
+C     ------------------------------------------------------------------
+                    SUBROUTINE QQQ(FUNC,A,B,SS)
+C     ------------------------------------------------------------------
+       IMPLICIT DOUBLE PRECISION (A-H,O-Z)
+       DIMENSION X(20),W(20)
+       DATA          X/.0387724175,.1160840706,.1926975807,.2681521850,.3419940908
+     #      ,.4137792043,.4830758016,.5494671250,.6125538896,.6719566846
+     #      ,.7273182551,.7783056514,.8246122308,.8659595032,.9020988069
+     #      ,.9328128082,.9579168192,.9772599499,.9907262386,.9982377097
+     #/
+      DATA W/.0775059479,.0770398181,.0761103619,.0747231690,.0728865823
+     #      ,.0706116473,.0679120458,.0648040134,.0613062424,.0574397690
+     #      ,.0532278469,.0486958076,.0438709081,.0387821679,.0334601952
+     #      ,.0279370069,.0222458491,.0164210583,.0104982845,.0045212770
+     #/
+      XM=0.5D0*(B+A)
+      XR=0.5D0*(B-A)
+      SS=0.D0
+      DO 11 J=1,20
+      DX=XR*X(J)
+      SS=SS+W(J)*(FUNC(XM+DX)+FUNC(XM-DX))
+11    CONTINUE
+      SS=XR*SS
+      RETURN
+      END
+C     ------------------------------------------------------------------
+                          FUNCTION FBEDE(U)
+C     ------------------------------------------------------------------
+      DOUBLE PRECISION FBEDE,U,C2ME,QIJ,PI,FERMI,XZ,ZMAS,AM
+      COMMON/NUC/NZ,NN,AM
+      COMMON/B1/QIJ
+      COMMON/B2/C2ME
+      COMMON/B3/PI
+      EXTERNAL FERMI
+      XZ=DFLOAT(NZ)
+      ZMAS=XZ+1.D0
+      FBEDE=
+     #     U*DSQRT(U**2-1.D0)*((QIJ-U)**2)*
+     #     FERMI(U,ZMAS)
+      RETURN
+      END
